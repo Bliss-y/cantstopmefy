@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "CantStopYouToo-be",
+  "description": "youtube toolkit :)",
+  "version": "1.0",
+  "action": {
+    "default_popup": "index.html" 
+  },
+  "permissions": [
+    "storage"
+  ],
+  "web_accessible_resources":[
+    "config/config.json"
+  ],
+  "content_scripts": [
+    {
+      "css": ["index.css"],
+      "js": ["scripts/index.js"],
+      "matches": [
+        "https://*/*"
+      ]
+    }
+  ]
+ 
+}
