@@ -2,9 +2,8 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import queryString from "query-string";
 import fs from "fs";
-import express, { json } from "express";
+import express from "express";
 import { Router } from "express";
-import { encode } from "punycode";
 const app = express();
 
 dotenv.config();
@@ -51,7 +50,6 @@ const refreshToken = async (refresh_token) => {
     method: "POST",
     body: `grant_type=${authOptions.form.grant_type}&refresh_token=${refresh_token}`,
   });
-  console.log(res);
   const newToken = res.json();
   return newToken;
 };
@@ -71,10 +69,7 @@ const getAuth = async (code) => {
   var token = await res.json();
 
   if (res.status != 200) {
-    console.log("getAuthError:");
-    console.log(token);
   }
-  console.log("token");
   return token;
 };
 
@@ -87,13 +82,11 @@ const getTrack = async (trackId) => {
     },
   });
   const track = await res.json();
-  console.log(track);
   return track;
 };
 
 const search = async (query) => {
   query = encodeURI(query);
-  console.log(query);
   const res = await fetch(
     `https://api.spotify.com/v1/search?q=${query}&type=track`,
     {
@@ -109,7 +102,6 @@ const search = async (query) => {
 
   const tracks = await res.json();
 
-  console.log(tracks.tracks.items[0]);
   return tracks;
 };
 
@@ -119,9 +111,7 @@ const getPlaylist = async (id) => {
       Authorization: `Bearer ${token.access_token}`,
     },
   });
-  console.log(token);
   const playlist = await res.json();
-  console.log(playlist);
   return playlist;
 };
 
@@ -160,10 +150,19 @@ const addSongsToPlaylist = async (id, tracks, unique = true) => {
 const route = Router();
 
 route.get("/test", async (req, res) => {
-  await addSongsToPlaylist("4PiHhy2PEpbbV2yEqA3TSG", [
-    (await search("stuck in the sound let's go")).tracks.items[0].uri,
-  ]);
+  await addSongsToPlaylist("", [,]);
   return;
+});
+
+route.get("/addToPlaylist", async (req, res) => {
+  console.log(req.query.title);
+  // await addSongsToPlaylist(
+  //   "4PiHhy2PEpbbV2yEqA3TSG",
+  //   (
+  //     await search("stuck in the sound let's go")
+  //   ).tracks.items[0].uri
+  // );
+  res.json({ status: "ok" });
 });
 
 route.get("/login", async (req, res) => {
@@ -196,6 +195,13 @@ route.get("/", async (req, res) => {
   );
 });
 
+route.get("/default", async (req, res) => {
+  res.send(`
+<h1>If this is your first time Then Login : )</h1>
+<a href="/login">Login</a>
+  `);
+});
+
 app.use("/", async (req, res, next) => {
   if (req.path === "/" || req.path === "/login") return next();
   var code;
@@ -207,7 +213,6 @@ app.use("/", async (req, res, next) => {
       code = JSON.parse(data).token.refresh_token;
       token = await refreshToken(code);
       if (!token.refresh_token) token.refresh_token = code;
-      console.log(token);
       if (token.error) {
         console.log("error Occurred", token);
         res.redirect("/login");
@@ -219,7 +224,6 @@ app.use("/", async (req, res, next) => {
         "utf-8",
         async (err, data) => {
           if (err) console.log(err);
-          res.send("<a href='/test'>Test</a>");
         }
       );
       next();

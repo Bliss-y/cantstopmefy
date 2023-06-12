@@ -7,17 +7,19 @@
     "default_popup": "index.html" 
   },
   "permissions": [
-    "storage"
+    "storage",
+    "tabs" 
   ],
-  "web_accessible_resources":[
-    "config/config.json"
-  ],
+ "host_permissions":[
+  
+    "http://localhost:8001/*"
+ ], 
   "content_scripts": [
     {
       "css": ["index.css"],
       "js": ["scripts/index.js"],
       "matches": [
-        "https://*/*"
+        "https://www.youtube.com/*"
       ]
     }
   ]
