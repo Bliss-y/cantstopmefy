@@ -1,16 +1,16 @@
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import queryString from "query-string";
+import fs from "fs";
+import express, { json } from "express";
+import { Router } from "express";
+import { encode } from "punycode";
+const app = express();
+
 dotenv.config();
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
-
-import express, { json } from "express";
-import { Router } from "express";
-const app = express();
-const code = "";
-// import { Express } from "express";
-const access_token = code;
+const access_token = "";
 //   "AQArKn2l0LcDbWCFIM4AnfrHIhoIztUf2R2XoXe1vWAy-L-9gf_EJAhyai5Y348mIUhyvyTl_xhrLfwxaOPnDmzCIzY_7d96ANwwuFxKmeCU3CPwhAaQC73egeUh09n1l6l4vgcuXagLS339DQNgwtlveurueh2OOzJAe33wZz10mKFeteFIOf-9ABeGACWws9RtFGsAgiHjMHULvxCdyJ-vroCjZ0tHdqk";
 
 const scope = "playlist-modify-private playlist-modify-public";
@@ -30,6 +30,32 @@ const login = async () => {
   );
 };
 
+const refreshToken = async (refresh_token) => {
+  // requesting access token from refresh token
+  var authOptions = {
+    url: "https://accounts.spotify.com/api/token",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization:
+        "Basic " +
+        new Buffer.from(client_id + ":" + client_secret).toString("base64"),
+    },
+    form: {
+      grant_type: "refresh_token",
+      refresh_token: refresh_token,
+    },
+    json: true,
+  };
+  const res = await fetch(authOptions.url, {
+    headers: authOptions.headers,
+    method: "POST",
+    body: `grant_type=${authOptions.form.grant_type}&refresh_token=${refresh_token}`,
+  });
+  console.log(res);
+  const newToken = res.json();
+  return newToken;
+};
+
 const getAuth = async (code) => {
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
@@ -45,8 +71,10 @@ const getAuth = async (code) => {
   var token = await res.json();
 
   if (res.status != 200) {
+    console.log("getAuthError:");
     console.log(token);
   }
+  console.log("token");
   return token;
 };
 
@@ -64,7 +92,8 @@ const getTrack = async (trackId) => {
 };
 
 const search = async (query) => {
-  console.log(token);
+  query = encodeURI(query);
+  console.log(query);
   const res = await fetch(
     `https://api.spotify.com/v1/search?q=${query}&type=track`,
     {
@@ -79,7 +108,8 @@ const search = async (query) => {
   }
 
   const tracks = await res.json();
-  console.log(tracks);
+
+  console.log(tracks.tracks.items[0]);
   return tracks;
 };
 
@@ -95,30 +125,45 @@ const getPlaylist = async (id) => {
   return playlist;
 };
 
-const addSongsToPlaylist = async (id, tracks) => {
-  console.log(tracks);
+const addSongsToPlaylist = async (id, tracks, unique = true) => {
+  if (unique) {
+    const playlist = await (
+      await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
+        headers: {
+          Authorization: `Bearer ${token.access_token}`,
+        },
+      })
+    ).json();
+
+    for (let i in playlist.items) {
+      if (playlist.items[i].track && playlist.items[i].track.uri == tracks[0]) {
+        return;
+      }
+    }
+  }
   const res = await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
     method: "POST",
     body: JSON.stringify({
-      uris: ["spotify:track:5mpUKTdskZea0gStWzeHUZ"],
+      uris: tracks,
     }),
     headers: {
       Authorization: `Bearer ${token.access_token}`,
       "Content-Type": "application/json",
     },
   });
-  console.log(await res.json());
+  return;
 };
 
 // getPlaylist("8d459e9cb093758b9c7153599379aa10");
 
 // getPlaylist("36jAPizJWlN4PlILRsp6Mq");
 const route = Router();
+
 route.get("/test", async (req, res) => {
   await addSongsToPlaylist("4PiHhy2PEpbbV2yEqA3TSG", [
-    (await search("unsainted")).tracks.items[0].uri,
+    (await search("stuck in the sound let's go")).tracks.items[0].uri,
   ]);
-  res.send("hi");
+  return;
 });
 
 route.get("/login", async (req, res) => {
@@ -136,30 +181,51 @@ route.get("/login", async (req, res) => {
 });
 
 route.get("/", async (req, res) => {
-  var code = req.query.code;
-  console.log(code);
+  var code = req.query.code || null;
+  if (!code) return res.redirect("/login");
   token = await getAuth(code);
-  res.send("<a href='/test'>Test</a>");
+  fs.writeFile(
+    "config.json",
+    JSON.stringify({ code: code, token: token }),
+    "utf-8",
+    async (err, data) => {
+      if (err) console.log(err);
+      res.send("<a href='/test'>Test</a>");
+      return;
+    }
+  );
+});
+
+app.use("/", async (req, res, next) => {
+  if (req.path === "/" || req.path === "/login") return next();
+  var code;
+  fs.readFile("config.JSON", "utf-8", async (err, data) => {
+    if (err) {
+      console.log("error reading file!");
+      redirect("localhost:8001/login");
+    } else {
+      code = JSON.parse(data).token.refresh_token;
+      token = await refreshToken(code);
+      if (!token.refresh_token) token.refresh_token = code;
+      console.log(token);
+      if (token.error) {
+        console.log("error Occurred", token);
+        res.redirect("/login");
+        return;
+      }
+      fs.writeFile(
+        "config.json",
+        JSON.stringify({ code: code, token: token }),
+        "utf-8",
+        async (err, data) => {
+          if (err) console.log(err);
+          res.send("<a href='/test'>Test</a>");
+        }
+      );
+      next();
+    }
+  });
 });
 
 app.use("/", route);
 app.listen(8001, () => {});
-
-// https://open.spotify.com/playlist/4PiHhy2PEpbbV2yEqA3TSG?si=f526644540184ab7&pt=8d459e9cb093758b9c7153599379aa10
-// https://open.spotify.com/playlist/36jAPizJWlN4PlILRsp6Mq?si=2d9d1855c0de4872
-
-// const res = await fetch(
-//   `https://api.spotify.com/v1/playlists/${"4PiHhy2PEpbbV2yEqA3TSG"}/tracks`,
-//   {
-//     method: "POST",
-//     body: {
-//       uris: ["spotify:track:4iV5W9uYEdYUVa79Axb7Rh"],
-//       position: 0,
-//     },
-//     headers: {
-//       Authorization: `Bearer ${token.access_token}`,
-//       "Content-Type": "application/json",
-//     },
-//   }
-// );
-// console.log(res);
