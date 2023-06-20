@@ -1,0 +1,38 @@
+#add-btn {
+  height: 50px;
+  width: max-content;
+  background-color: rgb(1, 20, 1);
+  color: white;
+  font-weight: bold;
+}
+
+#spotify-btn {
+  font-size: 50px;
+  color: rgb(84, 195, 84);
+  cursor: pointer;
+  background-color: rgba(6, 9, 19, 0);
+}
+
+.lds-dual-ring {
+  width: 50px;
+  height: 50px;
+}
+.lds-dual-ring:after {
+  content: " ";
+  display: block;
+  width: 32px;
+  height: 32px;
+  margin: 8px;
+  border-radius: 50%;
+  border: 6px solid #082c07;
+  border-color: #0c612e transparent #3dd14e transparent;
+  animation: lds-dual-ring 1.2s linear infinite;
+}
+@keyframes lds-dual-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

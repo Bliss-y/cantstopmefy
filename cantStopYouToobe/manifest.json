@@ -4,24 +4,27 @@
   "description": "youtube toolkit :)",
   "version": "1.0",
   "action": {
-    "default_popup": "index.html" 
+    "default_popup": "index.html"
   },
   "permissions": [
     "storage",
-    "tabs" 
+    "tabs",
+    "contextMenus"
   ],
- "host_permissions":[
-  
+  "host_permissions": [
     "http://localhost:8001/*"
- ], 
+  ],
   "content_scripts": [
     {
-      "css": ["index.css"],
-      "js": ["scripts/index.js"],
+      "css": [
+        "index.css"
+      ],
+      "js": [
+        "scripts/index.js"
+      ],
       "matches": [
         "https://www.youtube.com/*"
       ]
     }
   ]
- 
 }
