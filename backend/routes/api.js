@@ -27,3 +27,8 @@ api.get("/addToPlaylist", async (req, res) => {
   res.json({ status: "ok" });
 });
 export default api;
+
+api.get("/message", async (req, res) => {
+  console.log(req.query.message);
+  res.json({ message: "ok" });
+});
